@@ -95,7 +95,9 @@ for i in range(1,10):
 # Liste aller indices-Arrays, die verarbeitet werden sollen
 all_indices = [indices_0, indices_1, indices_2, indices_3, indices_4]
 
+# Define the folder path
 folder_path = "eeg_frequencies_relevance_plots"
+os.makedirs(folder_path, exist_ok=True)
 
 pdf_file = PdfPages(os.path.join(folder_path, "eeg_frequencies_relevance_plots.pdf"))
 
