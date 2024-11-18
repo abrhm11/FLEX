@@ -3,3 +3,4 @@ torch==2.3.1+cpu
 matplotlib==3.8.4
 scipy==1.13.1
 captum==0.7.0
+torch-dct==0.1.6
