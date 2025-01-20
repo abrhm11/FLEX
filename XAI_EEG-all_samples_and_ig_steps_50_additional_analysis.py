@@ -101,7 +101,7 @@ all_indices = [indices_0, indices_1, indices_2, indices_3, indices_4]
 folder_path = "eeg_frequencies_relevance_plots"
 os.makedirs(folder_path, exist_ok=True)
 
-pdf_file = PdfPages(os.path.join(folder_path, "eeg_frequencies_relevance_plots_0.pdf"))
+pdf_file = PdfPages(os.path.join(folder_path, "eeg_frequencies_relevance_plots_1.pdf"))
 
 model.train()
 ig = IntegratedGradients(model) # get an instance using our model
@@ -343,7 +343,7 @@ pdf_file.close()
 folder_path = "eeg_frequencies_relevance_plots_surrounding_segments"
 os.makedirs(folder_path, exist_ok=True)
 
-pdf_file = PdfPages(os.path.join(folder_path, "eeg_frequencies_relevance_plots_surrounding_segments_0.pdf"))
+pdf_file = PdfPages(os.path.join(folder_path, "eeg_frequencies_relevance_plots_surrounding_segments_1.pdf"))
 
 # Liste, um die durchschnittlichen (positiv gewichteten) Frequenzen für jedes indices-Array zu speichern
 overall_average_frequencies_pos_list = []
@@ -561,7 +561,7 @@ pdf_file.close()
 folder_path = "eeg_frequencies_relevance_plots_mean_of_surrounding_segments"
 os.makedirs(folder_path, exist_ok=True)
 
-pdf_file = PdfPages(os.path.join(folder_path, "eeg_frequencies_relevance_plots_mean_of_surrounding_segments_0.pdf"))
+pdf_file = PdfPages(os.path.join(folder_path, "eeg_frequencies_relevance_plots_mean_of_surrounding_segments_1.pdf"))
 
 # Liste, um die durchschnittlichen (positiv gewichteten) Frequenzen für jedes indices-Array zu speichern
 overall_average_frequencies_pos_list = []
