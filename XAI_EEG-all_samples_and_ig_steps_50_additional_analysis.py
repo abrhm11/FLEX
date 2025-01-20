@@ -215,7 +215,7 @@ for i, indices_i in enumerate(all_indices):
             all_weighted_attributions.append(relative_attributions)
     
             # Amplituden speichern
-            amplitudes = np.abs(x_segment_dct).numpy()
+            amplitudes = np.abs(x_segment_dct).cpu().detach().numpy()
             all_amplitudes.append(amplitudes)
     
     # Mittelwerte der Attributionswerte über alle Segmente hinweg für jede Frequenz berechnen (sollte eigentlich auch gewichtet sein, unterscheidet sich aber hier nur in einem Faktor)
@@ -430,7 +430,7 @@ for i, indices_i in enumerate(all_indices):
                 all_weighted_attributions.append(relative_attributions)
         
                 # Amplituden speichern
-                amplitudes = np.abs(x_segment_dct).numpy()
+                amplitudes = np.abs(x_segment_dct).cpu().detach().numpy()
                 all_amplitudes.append(amplitudes)
 
     if not all_weighted_attributions:
@@ -656,7 +656,7 @@ for i, indices_i in enumerate(all_indices):
                 all_weighted_attributions.append(relative_attributions)
         
                 # Amplituden speichern
-                amplitudes = np.abs(x_segment_dct).numpy()
+                amplitudes = np.abs(x_segment_dct).cpu().detach().numpy()
                 all_amplitudes.append(amplitudes)
     
     # Mittelwerte der Attributionswerte über alle Segmente hinweg für jede Frequenz berechnen (sollte eigentlich auch gewichtet sein, unterscheidet sich aber hier nur in einem Faktor)
