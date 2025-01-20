@@ -188,8 +188,7 @@ for i, indices_i in enumerate(all_indices):
             attributions_magnitude = ig_relevances.cpu().detach().numpy().flatten()
             
             # Frequenzen für die DCT berechnen
-            n = len(x_segment_dct)
-            frequencies = np.arange(n/2 + 1) / (n/100)
+            frequencies = np.fft.fftfreq(len(x_segment_dct), d=1/100)
             
             # Positive und negative Attributionswerte normalisieren
             #attributions_magnitude_pos = np.where(attributions_magnitude > 0, attributions_magnitude, 0)
@@ -403,8 +402,7 @@ for i, indices_i in enumerate(all_indices):
                 attributions_magnitude = ig_relevances.cpu().detach().numpy().flatten()
                 
                 # Frequenzen für die DCT berechnen
-                n = len(x_segment_dct)
-                frequencies = np.arange(n/2 + 1) / (n/100)
+                frequencies = np.fft.fftfreq(len(x_segment_dct), d=1/100)
                 
                 # Positive und negative Attributionswerte normalisieren
                 #attributions_magnitude_pos = np.where(attributions_magnitude > 0, attributions_magnitude, 0)
@@ -629,8 +627,7 @@ for i, indices_i in enumerate(all_indices):
                 attributions_magnitude = np.mean(list_attributions_magnitude, axis=0)
                 
                 # Frequenzen für die DCT berechnen
-                n = len(x_segment_dct)
-                frequencies = np.arange(n/2 + 1) / (n/100)
+                frequencies = np.fft.fftfreq(len(x_segment_dct), d=1/100)
                 
                 # Positive und negative Attributionswerte normalisieren
                 #attributions_magnitude_pos = np.where(attributions_magnitude > 0, attributions_magnitude, 0)
