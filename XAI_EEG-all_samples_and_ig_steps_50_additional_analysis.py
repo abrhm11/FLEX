@@ -4,13 +4,13 @@ import torch
 import torch_dct
 import os
 from collections import OrderedDict
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 import matplotlib.colors as colors
 from matplotlib.backends.backend_pdf import PdfPages
 from scipy.fft import dct
 from captum.attr import IntegratedGradients
 from scipy.io import savemat
-from matplotlib.colors import LinearSegmentedColormap
 
 #os.chdir('/content/gdrive/MyDrive/Jupyter_Notebooks_KDD')
 from XAI_EEG_data.DRCNN import Sleep_model_MultiTarget
@@ -110,6 +110,15 @@ internal_batch_size = 10
 
 # plots and values for single segments - later segments + surrounding segments
 
+# Schriftgröße entsprechend IEEE-Standard
+mpl.rcParams['font.size'] = 7  # Standardfont für Text
+mpl.rcParams['axes.titlesize'] = 8  # Achsentitel
+mpl.rcParams['axes.labelsize'] = 8  # Achsenbeschriftungen
+mpl.rcParams['xtick.labelsize'] = 7  # Tick-Labels (x-Achse)
+mpl.rcParams['ytick.labelsize'] = 7  # Tick-Labels (y-Achse)
+mpl.rcParams['legend.fontsize'] = 7  # Legende
+mpl.rcParams['font.family'] = 'Nimbus Sans'  # Schriftart Times New Roman
+
 # Liste, um die durchschnittlichen (positiv gewichteten) Frequenzen für jedes indices-Array zu speichern
 overall_average_frequencies_pos_list = []
 overall_average_frequencies_neg_list = []
@@ -117,26 +126,6 @@ mean_attributions_list = []
 all_frequencies = None
 
 phases = ["wake", "REM", "N1", "N2", "N3"]
-
-cmap = plt.cm.RdYlGn
-
-def non_linear_colormap(name, colors, power=0.1):
-    # Erzeugt eine Colormap mit einem nicht-linearen Übergang.
-    # Invertierung der Farbfolge und Kontrolle der Transformation durch 'power'.
-    index = np.linspace(0, 1, 256) ** power  # Nicht-lineares Index-Mapping
-    cdict = {
-        'red':   [(i, colors[0][0], colors[0][0]) if i == 0 else (i, colors[1][0], colors[1][0])
-                  for i in index],
-        'green': [(i, colors[0][1], colors[0][1]) if i == 0 else (i, colors[1][1], colors[1][1])
-                  for i in index],
-        'blue':  [(i, colors[0][2], colors[0][2]) if i == 0 else (i, colors[1][2], colors[1][2])
-                  for i in index]
-    }
-    return LinearSegmentedColormap(name, segmentdata=cdict, N=256)
-
-# Definition der Colormaps: LightGray zu Green und zu Red
-cmap_pos = non_linear_colormap('GreensToGray', [(0.827, 0.827, 0.827), (0.0, 0.36, 0.0)])
-cmap_neg = non_linear_colormap('RedsToGray', [(0.827, 0.827, 0.827), (0.36, 0.0, 0.0)])
 
 # Zielordner für mean_attributions Matrix
 output_folder = "mean_attributions_single_segment"
@@ -188,7 +177,7 @@ for i, indices_i in enumerate(all_indices):
             attributions_magnitude = ig_relevances.cpu().detach().numpy().flatten()
             
             # Frequenzen für die DCT berechnen
-            frequencies = np.fft.fftfreq(len(x_segment_dct), d=1/100)
+            frequencies = np.fft.fftfreq(len(x_segment_dct), d=1/100) 
             
             # Positive und negative Attributionswerte normalisieren
             #attributions_magnitude_pos = np.where(attributions_magnitude > 0, attributions_magnitude, 0)
@@ -214,7 +203,7 @@ for i, indices_i in enumerate(all_indices):
             all_weighted_attributions.append(relative_attributions)
     
             # Amplituden speichern
-            amplitudes = np.abs(x_segment_dct).cpu().detach().numpy()
+            amplitudes = np.abs(x_segment_dct).numpy()
             all_amplitudes.append(amplitudes)
     
     # Mittelwerte der Attributionswerte über alle Segmente hinweg für jede Frequenz berechnen (sollte eigentlich auch gewichtet sein, unterscheidet sich aber hier nur in einem Faktor)
@@ -238,66 +227,45 @@ for i, indices_i in enumerate(all_indices):
     overall_average_frequencies_neg_list.append(overall_average_frequency_neg)
     mean_attributions_list.append(mean_attributions)
     
-    # Plot 1: Average Amplitudes colored by weighted attributions
-    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 12))
-    
-    # Positive and negative color map for attribution values
-    cmap = plt.cm.RdYlGn
-    
-    # First Plot - Average Amplitudes
-    bars = ax1.bar(
-        all_frequencies,
-        mean_amplitudes,
-        color=cmap(((mean_attributions / np.max(np.abs(mean_attributions)))+1)/2),
-        label="coloured by weighted attributions",
-        width=0.2
-    )
-    
-    # Settings for the first plot
-    ax1.set_xlabel("Frequency (Hz)", fontsize=20)
-    ax1.set_ylabel("Average Amplitudes", fontsize=20)
-    ax1.set_title(f"Average weighted attributions of frequencies in {phases[i]} stage", fontsize=22)
-    ax2.tick_params(axis='both', labelsize=18)
-    ax1.set_xlim(0, 40)  # Limit to 40 Hz
-    ax1.set_ylim(0, np.max(mean_amplitudes) * 1.1)
-    ax1.grid(axis='y', linestyle='--', alpha=0.7)
+    # Normalize for color mapping
+    norm = mpl.colors.Normalize(vmin=-np.max(np.abs(mean_attributions)), vmax=np.max(np.abs(mean_attributions)))
 
-    # Plot 2: Average Weighted Positive and Negative Attributions
-    
-    # Positive weighted attributions
-    bars_pos = ax2.bar(
+    # Plot mean attributions
+    fig, ax = plt.subplots(figsize = (3.625, 2))
+    bars = ax.bar(
         all_frequencies,
-        mean_weighted_pos_attributions,
-        color=cmap_pos(mean_weighted_pos_attributions / np.max(np.abs(mean_attributions))),
-        label="Positively weighted attributions",
+        mean_attributions,
+        color=plt.cm.coolwarm(norm(mean_attributions)),
         width=0.2
     )
-        
-    # Negative weighted attributions (negated for visual clarity)
-    bars_neg = ax2.bar(
-        all_frequencies,
-        mean_weighted_neg_attributions,
-        color=cmap_neg(-mean_weighted_neg_attributions / np.max(np.abs(mean_attributions))),
-        label="Negatively weighted attributions",
-        width=0.2
-    )
-    
-    # Settings for the second plot
-    ax2.set_xlabel("Frequency (Hz)", fontsize=20)
-    ax2.set_ylabel("Average Attribution", fontsize=20)
-    ax2.set_title(f"Average weighted positive/negative attributions in {phases[i]} stage", fontsize=22)
-    ax2.tick_params(axis='both', labelsize=18)
-    ax2.set_xlim(0, 40)
-    ax2.set_ylim(np.min(mean_weighted_neg_attributions) * 1.1, np.max(mean_weighted_pos_attributions) * 1.1)
-    ax2.grid(axis='y', linestyle='--', alpha=0.7)
 
-    # Show the figure with both plots stacked vertically
+    # Plot settings
+    ax.set_xlabel("Frequency (Hz)")
+    ax.set_ylabel("Average Attribution")
+    ax.tick_params(axis="both",)
+    ax.set_xlim(0, 30)
+    ax.set_ylim(-0.0012, 0.0021)
+    ax.grid(axis="y", linestyle="--", alpha=0.7)
+
+    # Add colorbar
+    sm = mpl.cm.ScalarMappable(cmap=plt.cm.coolwarm, norm=norm)
+    sm.set_array([])
+    cbar = plt.colorbar(sm, ax=ax, pad=0.02)
+    cbar.ax.tick_params()
+
+    # Add labels to the right of the colorbar
+    cbar_pos = cbar.ax.get_position()
+    x_offset = cbar_pos.x1+0.03
+    ax.text(x_offset, cbar_pos.y1+0.025, "Pro", ha="left", va="center", fontsize=8, transform=fig.transFigure, color=(0.705673158, 0.01555616, 0.150232812, 1.0))
+    ax.text(x_offset, ((cbar_pos.y0 + cbar_pos.y1) / 2)+0.04, "Irr", ha="left", va="center", fontsize=8, transform=fig.transFigure, color=(0.5, 0.5, 0.5, 1.0))
+    ax.text(x_offset, cbar_pos.y0+0.065, "Con", ha="left", va="center", fontsize=8, transform=fig.transFigure, color=(0.2298057, 0.298717966, 0.753683153, 1.0))
+
     plt.tight_layout()
     pdf_file.savefig()
     plt.show()
 
     # Dateiname erstellen
-    mat_filename = f"mean_attributions_single_segment_{phases[i]}.mat"
+    mat_filename = f"mean_attributions_single_segment_{phases[i]}_1.mat"
     mat_filepath = os.path.join(output_folder, mat_filename)
     
     # Speichere die Liste als Matrix
@@ -331,7 +299,6 @@ pdf_file.savefig(fig_text)
 
 # Close the PDF file
 pdf_file.close()
-
 
 
 
@@ -402,7 +369,7 @@ for i, indices_i in enumerate(all_indices):
                 attributions_magnitude = ig_relevances.cpu().detach().numpy().flatten()
                 
                 # Frequenzen für die DCT berechnen
-                frequencies = np.fft.fftfreq(len(x_segment_dct), d=1/100)
+                frequencies = np.fft.fftfreq(segment_length, d=1/100)
                 
                 # Positive und negative Attributionswerte normalisieren
                 #attributions_magnitude_pos = np.where(attributions_magnitude > 0, attributions_magnitude, 0)
@@ -428,7 +395,7 @@ for i, indices_i in enumerate(all_indices):
                 all_weighted_attributions.append(relative_attributions)
         
                 # Amplituden speichern
-                amplitudes = np.abs(x_segment_dct).cpu().detach().numpy()
+                amplitudes = np.abs(x_segment_dct).numpy()
                 all_amplitudes.append(amplitudes)
 
     if not all_weighted_attributions:
@@ -455,64 +422,45 @@ for i, indices_i in enumerate(all_indices):
         overall_average_frequencies_neg_list.append(overall_average_frequency_neg)
         mean_attributions_list.append(mean_attributions)
         
-        # Plot 1: Average Amplitudes colored by weighted attributions
-        fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 12))
-        
-        
-        # First Plot - Average Amplitudes
-        bars = ax1.bar(
-            all_frequencies,
-            mean_amplitudes,
-            color=cmap(((mean_attributions / np.max(np.abs(mean_attributions)))+1)/2),
-            label="coloured by weighted attributions",
-            width=0.2
-        )
-        
-        # Settings for the first plot
-        ax1.set_xlabel("Frequency (Hz)", fontsize=20)
-        ax1.set_ylabel("Average Amplitudes", fontsize=20)
-        ax1.set_title(f"Average weighted attributions of frequencies in {phases[i]} stage", fontsize=22)
-        ax1.tick_params(axis='both', labelsize=18)
-        ax1.set_xlim(0, 40)  # Limit to 40 Hz
-        ax1.set_ylim(0, np.max(mean_amplitudes) * 1.1)
-        ax1.grid(axis='y', linestyle='--', alpha=0.7)
+        # Normalize for color mapping
+        norm = mpl.colors.Normalize(vmin=-np.max(np.abs(mean_attributions)), vmax=np.max(np.abs(mean_attributions)))
     
-        # Plot 2: Average Weighted Positive and Negative Attributions    
-        
-        # Positive weighted attributions
-        bars_pos = ax2.bar(
+        # Plot mean attributions
+        fig, ax = plt.subplots(figsize = (3.625, 2))
+        bars = ax.bar(
             all_frequencies,
-            mean_weighted_pos_attributions,
-            color=cmap_pos(mean_weighted_pos_attributions / np.max(np.abs(mean_attributions))),
-            label="Positively weighted attributions",
+            mean_attributions,
+            color=plt.cm.coolwarm(norm(mean_attributions)),
             width=0.2
         )
-            
-        # Negative weighted attributions (negated for visual clarity)
-        bars_neg = ax2.bar(
-            all_frequencies,
-            mean_weighted_neg_attributions,
-            color=cmap_neg(-mean_weighted_neg_attributions / np.max(np.abs(mean_attributions))),
-            label="Negatively weighted attributions",
-            width=0.2
-        )
-        
-        # Settings for the second plot
-        ax2.set_xlabel("Frequency (Hz)", fontsize=20)
-        ax2.set_ylabel("Average Attribution", fontsize=20)
-        ax2.set_title(f"Average weighted positive/negative attributions in {phases[i]} stage", fontsize=22)
-        ax2.tick_params(axis='both', labelsize=18)
-        ax2.set_xlim(0, 40)
-        ax2.set_ylim(np.min(mean_weighted_neg_attributions) * 1.1, np.max(mean_weighted_pos_attributions) * 1.1)
-        ax2.grid(axis='y', linestyle='--', alpha=0.7)
     
-        # Show the figure with both plots stacked vertically
+        # Plot settings
+        ax.set_xlabel("Frequency (Hz)")
+        ax.set_ylabel("Average Attribution")
+        ax.tick_params(axis="both",)
+        ax.set_xlim(0, 30)
+        ax.set_ylim(-0.0012, 0.0021)
+        ax.grid(axis="y", linestyle="--", alpha=0.7)
+    
+        # Add colorbar
+        sm = mpl.cm.ScalarMappable(cmap=plt.cm.coolwarm, norm=norm)
+        sm.set_array([])
+        cbar = plt.colorbar(sm, ax=ax, pad=0.02)
+        cbar.ax.tick_params()
+    
+        # Add labels to the right of the colorbar
+        cbar_pos = cbar.ax.get_position()
+        x_offset = cbar_pos.x1+0.03
+        ax.text(x_offset, cbar_pos.y1+0.025, "Pro", ha="left", va="center", fontsize=8, transform=fig.transFigure, color=(0.705673158, 0.01555616, 0.150232812, 1.0))
+        ax.text(x_offset, ((cbar_pos.y0 + cbar_pos.y1) / 2)+0.04, "Irr", ha="left", va="center", fontsize=8, transform=fig.transFigure, color=(0.5, 0.5, 0.5, 1.0))
+        ax.text(x_offset, cbar_pos.y0+0.065, "Con", ha="left", va="center", fontsize=8, transform=fig.transFigure, color=(0.2298057, 0.298717966, 0.753683153, 1.0))
+    
         plt.tight_layout()
         pdf_file.savefig()
         plt.show()
 
         # Dateiname erstellen
-        mat_filename = f"mean_attributions_segment_and_surrounding_{phases[i]}.mat"
+        mat_filename = f"mean_attributions_segment_and_surrounding_{phases[i]}_1.mat"
         mat_filepath = os.path.join(output_folder, mat_filename)
         
         # Speichere die Liste als Matrix
@@ -653,7 +601,7 @@ for i, indices_i in enumerate(all_indices):
                 all_weighted_attributions.append(relative_attributions)
         
                 # Amplituden speichern
-                amplitudes = np.abs(x_segment_dct).cpu().detach().numpy()
+                amplitudes = np.abs(x_segment_dct).numpy()
                 all_amplitudes.append(amplitudes)
     
     # Mittelwerte der Attributionswerte über alle Segmente hinweg für jede Frequenz berechnen (sollte eigentlich auch gewichtet sein, unterscheidet sich aber hier nur in einem Faktor)
@@ -677,63 +625,45 @@ for i, indices_i in enumerate(all_indices):
     overall_average_frequencies_neg_list.append(overall_average_frequency_neg)
     mean_attributions_list.append(mean_attributions)
     
-    # Plot 1: Average Amplitudes colored by weighted attributions
-    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 12))
-    
-    # First Plot - Average Amplitudes
-    bars = ax1.bar(
-        all_frequencies,
-        mean_amplitudes,
-        color=cmap(((mean_attributions / np.max(np.abs(mean_attributions)))+1)/2),
-        label="coloured by weighted attributions",
-        width=0.2
-    )
-    
-    # Settings for the first plot
-    ax1.set_xlabel("Frequency (Hz)", fontsize=20)
-    ax1.set_ylabel("Average Amplitudes", fontsize=20)
-    ax1.set_title(f"Average weighted attributions of frequencies in {phases[i]} stage", fontsize=22)
-    ax1.tick_params(axis='both', labelsize=18)
-    ax1.set_xlim(0, 40)  # Limit to 40 Hz
-    ax1.set_ylim(0, np.max(mean_amplitudes) * 1.1)
-    ax1.grid(axis='y', linestyle='--', alpha=0.7)
+    # Normalize for color mapping
+    norm = mpl.colors.Normalize(vmin=-np.max(np.abs(mean_attributions)), vmax=np.max(np.abs(mean_attributions)))
 
-    # Plot 2: Average Weighted Positive and Negative Attributions
-    
-    # Positive weighted attributions
-    bars_pos = ax2.bar(
+    # Plot mean attributions
+    fig, ax = plt.subplots(figsize = (3.625, 2))
+    bars = ax.bar(
         all_frequencies,
-        mean_weighted_pos_attributions,
-        color=cmap_pos(mean_weighted_pos_attributions / np.max(np.abs(mean_attributions))),
-        label="Positively weighted attributions",
+        mean_attributions,
+        color=plt.cm.coolwarm(norm(mean_attributions)),
         width=0.2
     )
-        
-    # Negative weighted attributions (negated for visual clarity)
-    bars_neg = ax2.bar(
-        all_frequencies,
-        mean_weighted_neg_attributions,
-        color=cmap_neg(-mean_weighted_neg_attributions / np.max(np.abs(mean_attributions))),
-        label="Negatively weighted attributions",
-        width=0.2
-    )
-    
-    # Settings for the second plot
-    ax2.set_xlabel("Frequency (Hz)", fontsize=20)
-    ax2.set_ylabel("Average Attribution", fontsize=20)
-    ax2.set_title(f"Average weighted positive/negative attributions in {phases[i]} stage", fontsize=22)
-    ax2.tick_params(axis='both', labelsize=18)
-    ax2.set_xlim(0, 40)
-    ax2.set_ylim(np.min(mean_weighted_neg_attributions) * 1.1, np.max(mean_weighted_pos_attributions) * 1.1)
-    ax2.grid(axis='y', linestyle='--', alpha=0.7)
 
-    # Show the figure with both plots stacked vertically
+    # Plot settings
+    ax.set_xlabel("Frequency (Hz)")
+    ax.set_ylabel("Average Attribution")
+    ax.tick_params(axis="both",)
+    ax.set_xlim(0, 30)
+    ax.set_ylim(-0.0012, 0.0021)
+    ax.grid(axis="y", linestyle="--", alpha=0.7)
+
+    # Add colorbar
+    sm = mpl.cm.ScalarMappable(cmap=plt.cm.coolwarm, norm=norm)
+    sm.set_array([])
+    cbar = plt.colorbar(sm, ax=ax, pad=0.02)
+    cbar.ax.tick_params()
+
+    # Add labels to the right of the colorbar
+    cbar_pos = cbar.ax.get_position()
+    x_offset = cbar_pos.x1+0.03
+    ax.text(x_offset, cbar_pos.y1+0.025, "Pro", ha="left", va="center", fontsize=8, transform=fig.transFigure, color=(0.705673158, 0.01555616, 0.150232812, 1.0))
+    ax.text(x_offset, ((cbar_pos.y0 + cbar_pos.y1) / 2)+0.04, "Irr", ha="left", va="center", fontsize=8, transform=fig.transFigure, color=(0.5, 0.5, 0.5, 1.0))
+    ax.text(x_offset, cbar_pos.y0+0.065, "Con", ha="left", va="center", fontsize=8, transform=fig.transFigure, color=(0.2298057, 0.298717966, 0.753683153, 1.0))
+
     plt.tight_layout()
     pdf_file.savefig()
     plt.show()
 
     # Dateiname erstellen
-    mat_filename = f"mean_attributions_mean_of_surrounding_segments{phases[i]}.mat"
+    mat_filename = f"mean_attributions_mean_of_surrounding_segments_{phases[i]}_1.mat"
     mat_filepath = os.path.join(output_folder, mat_filename)
     
     # Speichere die Liste als Matrix
