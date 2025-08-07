@@ -1,3 +1,5 @@
+⚠️ **Outdated version – for updates, check out [gitlab.gwdg.de/paulabraham.graeve/flex](https://gitlab.gwdg.de/paulabraham.graeve/flex)**
+
 # FLEX: Frequency Layer Explanation
 
 ## Overview
